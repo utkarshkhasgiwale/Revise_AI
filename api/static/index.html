@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Revise_AI — Ask Your Lectures Anything</title>
+<meta name="description" content="Hybrid search + smart grounding + timestamps. Ask questions, get answers grounded in lectures." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  :root {
+    --bg: #0a0e27;
+    --bg-light: #1a1f3a;
+    --bg-lighter: #252d4a;
+    --accent: #00d9ff;
+    --accent-secondary: #ff6b9d;
+    --accent-tertiary: #ffc107;
+    --text: #e4e9f7;
+    --text-dim: #a0a9c3;
+    --text-faint: #6b7499;
+    --border: #2d3558;
+    --radius: 12px;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ============ HEADER ============ */
+  header {
+    background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 40px 24px;
+  }
+
+  .header-content {
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .brand::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+  }
+
+  h1 {
+    margin: 0 0 12px 0;
+    font-size: clamp(32px, 5vw, 48px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .tagline {
+    color: var(--text-dim);
+    font-size: 16px;
+    max-width: 700px;
+    margin: 0 0 24px 0;
+    line-height: 1.6;
+  }
+
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    font-size: 13px;
+    color: var(--text-faint);
+  }
+
+  .stats b {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* ============ MAIN LAYOUT ============ */
+  main {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+    display: grid;
+    grid-template-columns: 1fr 600px;
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (max-width: 1400px) {
+    main {
+      grid-template-columns: 1fr 550px;
+      gap: 15px;
+      padding: 30px 16px 60px;
+    }
+  }
+
+  @media (max-width: 1200px) {
+    main {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    .player-section {
+      grid-column: 1;
+      grid-row: auto;
+    }
+  }
+
+  /* ============ SEARCH SECTION ============ */
+  .search-section {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .search-box {
+    display: flex;
+    gap: 10px;
+    background: var(--bg-lighter);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(0, 217, 255, 0.05);
+  }
+
+  .search-box:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 4px 30px rgba(0, 217, 255, 0.15);
+  }
+
+  .search-box svg {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    align-self: center;
+    color: var(--text-faint);
+  }
+
+  #q {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 15px;
+    outline: none;
+  }
+
+  #q::placeholder {
+    color: var(--text-faint);
+  }
+
+  .search-box button {
+    padding: 10px 24px;
+    border: 0;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent) 0%, #00b8d4 100%);
+    color: var(--bg);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+  }
+
+  .search-box button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 217, 255, 0.3);
+  }
+
+  .search-box button:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  /* ============ MODE TABS ============ */
+  .mode-tabs {
+    display: flex;
+    gap: 8px;
+    background: var(--bg-lighter);
+    padding: 6px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .mode-tab {
+    flex: 1;
+    padding: 12px 16px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .mode-tab:hover {
+    color: var(--text);
+  }
+
+  .mode-tab.active {
+    background: var(--accent);
+    color: var(--bg);
+    box-shadow: 0 4px 12px rgba(0, 217, 255, 0.3);
+  }
+
+  .mode-tab:nth-child(2).active { background: linear-gradient(135deg, var(--accent-secondary), #ff5a8a); }
+  .mode-tab:nth-child(3).active { background: linear-gradient(135deg, var(--accent-tertiary), #ffb300); }
+
+  /* ============ RESULTS ============ */
+  .results-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 200px;
+  }
+
+  .result-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-top: 8px;
+  }
+
+  .empty-state {
+    background: var(--bg-lighter);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--text-faint);
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .moment-card {
+    background: var(--bg-lighter);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    gap: 12px;
+    align-items: start;
+  }
+
+  .moment-card:hover {
+    border-color: var(--accent);
+    background: #2a3250;
+    transform: translateX(4px);
+  }
+
+  .moment-index {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, var(--accent), #00b8d4);
+    border-radius: 6px;
+    color: var(--bg);
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  .moment-info {
+    min-width: 0;
+  }
+
+  .moment-title {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .moment-preview {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .moment-time {
+    font-variant-numeric: tabular-nums;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  /* ============ PLAYER SECTION ============ */
+  .player-section {
+    position: sticky;
+    top: 24px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .player-card {
+    background: var(--bg-lighter);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 217, 255, 0.1);
+    width: 100%;
+  }
+
+  .player-placeholder {
+    aspect-ratio: 16/9;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--text-faint);
+    font-size: 48px;
+  }
+
+  .player-placeholder p {
+    text-align: center;
+    font-size: 13px;
+    margin: 0;
+    max-width: 300px;
+  }
+
+  #playerBox {
+    aspect-ratio: 16/9;
+    background: #000;
+  }
+
+  #playerBox iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+  }
+
+  .player-info {
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .player-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-faint);
+    flex: none;
+  }
+
+  .player-dot.live {
+    background: #00ff88;
+    box-shadow: 0 0 8px #00ff88;
+  }
+
+  .player-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ============ FEATURES GRID ============ */
+  .features-grid {
+    margin-top: 60px;
+    padding-top: 60px;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+  }
+
+  .feature-card {
+    background: linear-gradient(135deg, var(--bg-lighter) 0%, #2a3250 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    transition: all 0.3s;
+  }
+
+  .feature-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 217, 255, 0.1);
+  }
+
+  .feature-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+  }
+
+  .feature-title {
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .feature-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* ============ FOOTER ============ */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 24px;
+    text-align: center;
+    color: var(--text-faint);
+    font-size: 13px;
+  }
+
+  footer a {
+    color: var(--accent);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  footer a:hover {
+    color: var(--accent-secondary);
+  }
+
+  /* ============ LOADING ============ */
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+    animation: sweep 2s infinite;
+  }
+
+  @keyframes sweep {
+    to { transform: translateX(100%); }
+  }
+
+  .skeleton {
+    height: 12px;
+    border-radius: 6px;
+    background: var(--bg-lighter);
+    margin-bottom: 12px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-content">
+    <div class="brand">🎓 Revise_AI</div>
+    <h1>Ask your lectures <em style="color: var(--accent);">anything</em></h1>
+    <p class="tagline">
+      Hybrid search meets smart grounding. Ask questions in Hinglish or English. Get answers grounded only in lectures, with timestamps that jump to the exact moment.
+    </p>
+    <div class="stats">
+      <span><b id="statLectures">—</b> lectures indexed</span>
+      <span><b id="statHours">—</b> hours of content</span>
+      <span><b id="statChunks">—</b> searchable moments</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="search-section">
+    <!-- SEARCH BOX -->
+    <div class="search-box">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="q" type="text" maxlength="500" autocomplete="off" autofocus placeholder="e.g., memoization vs tabulation, sliding window pattern, graph traversal" />
+      <button id="askBtn" type="submit">Search</button>
+    </div>
+
+    <!-- MODE TABS -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="where">📍 Show Me Where</button>
+      <button class="mode-tab" data-mode="ask">💭 Ask & Answer</button>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="results-container">
+      <div class="result-label" id="resultsLabel">Click search to see moments</div>
+      <div id="results" class="empty-state">
+        <div>
+          <p>Use "Show Me Where" to find timestamps instantly.</p>
+          <p style="font-size: 12px; margin-top: 8px; color: var(--text-faint);">No LLM, instant and free. Or try "Ask & Answer" for explanations.</p>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- PLAYER -->
+  <aside class="player-section">
+    <div class="player-card">
+      <div id="playerBox">
+        <div class="player-placeholder">
+          <div style="font-size: 48px;">▶️</div>
+          <p>Click any timestamp to start watching</p>
+        </div>
+      </div>
+      <div class="player-info">
+        <span class="player-dot"></span>
+        <span class="player-text" id="nowText">No lecture loaded</span>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <strong>Revise_AI</strong> — Grounded retrieval over your lectures.
+  <br>Answers come only from lectures. Out-of-scope questions are refused, not guessed.
+  <br><a href="#">Features</a> • <a href="#">Docs</a> • <a href="#">GitHub</a>
+</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const q = $("q"), askBtn = $("askBtn"), resultsEl = $("results");
+const nowText = $("nowText");
+const playerBox = $("playerBox");
+let currentMode = "where";
+let currentVideo = null;
+let currentSeconds = 0;
+
+// ========== STATS ==========
+fetch("/meta").then(r => r.json()).then(m => {
+  $("statLectures").textContent = m.lectures;
+  $("statHours").textContent = m.hours;
+}).catch(() => {});
+
+fetch("/stats").then(r => r.json()).then(s => {
+  $("statChunks").textContent = (s.chunks || 0).toLocaleString();
+}).catch(() => {});
+
+// ========== MODE SWITCHING ==========
+document.querySelectorAll(".mode-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    if (tab.classList.contains("active")) return;
+    document.querySelectorAll(".mode-tab").forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+    currentMode = tab.dataset.mode;
+
+    // Don't clear results - restore cached results for this mode
+    if (lastResults.length > 0) {
+      renderResults(lastResults, currentMode);
+    } else {
+      resultsEl.innerHTML = "";
+    }
+
+    const labels = {
+      where: "Moments where this was explained",
+      ask: "AI explanation based on lectures"
+    };
+    $("resultsLabel").textContent = labels[currentMode];
+  });
+});
+
+// ========== DIRECT YOUTUBE EMBED ==========
+function jump(videoId, seconds, title, el) {
+  currentVideo = videoId;
+  currentSeconds = seconds;
+
+  // Embed YouTube iframe directly
+  const iframeUrl = `https://www.youtube.com/embed/${videoId}?start=${Math.floor(seconds)}&autoplay=1&rel=0&modestbranding=1`;
+  playerBox.innerHTML = `<iframe width="100%" height="100%" src="${iframeUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+
+  nowText.innerHTML = `<strong>${title}</strong> — ${fmt(seconds)}`;
+  document.querySelectorAll(".moment-card.active").forEach(n => n.classList.remove("active"));
+  if (el) el.classList.add("active");
+}
+
+function fmt(t) {
+  t = Math.max(0, Math.floor(t));
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+  const mm = String(m).padStart(2, "0"), ss = String(s).padStart(2, "0");
+  return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+// ========== SEARCH ==========
+let lastQuery = "";
+let lastResults = [];
+let currentSessionId = "session_" + Date.now();
+
+async function performSearch() {
+  const question = q.value.trim();
+  if (!question) return;
+
+  lastQuery = question;
+  askBtn.disabled = true;
+  askBtn.textContent = "Searching...";
+  resultsEl.className = "shimmer";
+  resultsEl.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
+
+  try {
+    let endpoint, body;
+
+    if (currentMode === "where") {
+      endpoint = "/show-where";
+      body = { question, top_k: 12 };
+    } else if (currentMode === "ask") {
+      endpoint = "/ask";
+      body = { question, top_k: 6, session_id: currentSessionId, use_hybrid: true };
+    }
+
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Error");
+
+    lastResults = data;
+    resultsEl.className = "";
+    resultsEl.innerHTML = "";
+
+    renderResults(data, currentMode);
+  } catch (err) {
+    resultsEl.className = "empty-state";
+    resultsEl.innerHTML = `<p style="color: #ff6b9d;">Error: ${String(err.message || err)}</p>`;
+  } finally {
+    askBtn.disabled = false;
+    askBtn.textContent = "Search";
+  }
+}
+
+function renderResults(results, mode) {
+  resultsEl.className = "";
+  resultsEl.innerHTML = "";
+
+  if (mode === "ask") {
+    const resObj = results || {};
+    const answerCard = document.createElement("div");
+    answerCard.className = "moment-card";
+    answerCard.style.background = "linear-gradient(135deg, #1a2a4a 0%, #2a3a5a 100%)";
+    answerCard.style.borderColor = "#00d9ff";
+    answerCard.style.gridColumn = "1/-1";
+
+    answerCard.innerHTML = `
+      <div style="grid-column: 1/-1; color: #00d9ff; font-weight: 700; margin-bottom: 10px;">💭 AI Answer & Grounded Explanation</div>
+      <div style="grid-column: 1/-1; color: #e4e9f7; line-height: 1.6; font-size: 14px; white-space: pre-wrap;">${resObj.answer || "No answer generated."}</div>
+    `;
+    resultsEl.appendChild(answerCard);
+
+    const citations = resObj.citations || [];
+    if (citations.length > 0) {
+      const citeHeader = document.createElement("div");
+      citeHeader.style.gridColumn = "1/-1";
+      citeHeader.style.fontWeight = "700";
+      citeHeader.style.color = "var(--text)";
+      citeHeader.style.marginTop = "10px";
+      citeHeader.textContent = "Grounded Sources / Timestamps:";
+      resultsEl.appendChild(citeHeader);
+
+      citations.forEach((m, i) => {
+        const card = document.createElement("div");
+        card.className = "moment-card";
+        const seconds = m.start_sec || 0;
+        card.innerHTML = `
+          <div class="moment-index">${i + 1}</div>
+          <div class="moment-info">
+            <div class="moment-title">${m.title || m.video_id}</div>
+            <div class="moment-preview">Grounded citation match</div>
+          </div>
+          <div class="moment-time">${m.timestamp || fmt(seconds)}</div>
+        `;
+        card.addEventListener("click", () => jump(m.video_id, seconds, m.title || "Lecture", card));
+        resultsEl.appendChild(card);
+      });
+    } else {
+      const emptyMsg = document.createElement("div");
+      emptyMsg.className = "empty-state";
+      emptyMsg.style.gridColumn = "1/-1";
+      emptyMsg.innerHTML = "<p>No grounded citations found for this answer.</p>";
+      resultsEl.appendChild(emptyMsg);
+    }
+  } else {
+    let list = results.moments || results.results || results.lectures || results;
+    if (!Array.isArray(list) || list.length === 0) {
+      resultsEl.className = "empty-state";
+      resultsEl.innerHTML = "<p>No results. Try a different search.</p>";
+      return;
+    }
+
+    list.forEach((m, i) => {
+      const card = document.createElement("div");
+      card.className = "moment-card";
+      const seconds = m.seconds || m.start_sec || 0;
+      card.innerHTML = `
+        <div class="moment-index">${i + 1}</div>
+        <div class="moment-info">
+          <div class="moment-title">${m.lecture || m.title || m.video_id}</div>
+          <div class="moment-preview">${m.preview || m.text || ""}</div>
+        </div>
+        <div class="moment-time">${m.timestamp || fmt(seconds)}</div>
+      `;
+      card.addEventListener("click", () => jump(m.video_id, seconds, m.lecture || m.title || "Lecture", card));
+      resultsEl.appendChild(card);
+    });
+
+    if (list.length > 0) {
+      const first = list[0];
+      const firstSeconds = first.seconds || first.start_sec || 0;
+      jump(first.video_id, firstSeconds, first.lecture || first.title || "Lecture", resultsEl.querySelector(".moment-card"));
+    }
+  }
+}
+
+askBtn.addEventListener("click", performSearch);
+q.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") performSearch();
+});
+</script>
+</body>
+</html>
