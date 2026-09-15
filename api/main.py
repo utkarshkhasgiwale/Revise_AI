@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Revise_AI", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="Revise_AI", version="0.2.0")
 
 
 class AskRequest(BaseModel):
